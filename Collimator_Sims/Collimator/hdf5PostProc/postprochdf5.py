@@ -13,6 +13,11 @@ if(len(sys.argv) != 2):
 g4sfile = h5py.File(sys.argv[1], 'r')
 g4sntuple = g4sfile['default_ntuples']['g4sntuple']
 
+#import matplotlib.pyplot as plt
+#plt.hist(g4sntuple['KE']['pages'])
+#plt.show()
+#print((g4sntuple['KE']['pages'][2]))
+#exit()
 # build a pandas DataFrame from the hdf5 datasets we will use
 g4sdf = pd.DataFrame(np.array(g4sntuple['event']['pages']), columns=['event'])
 g4sdf = g4sdf.join(pd.DataFrame(np.array(g4sntuple['step']['pages']), columns=['step']), 
@@ -29,25 +34,28 @@ g4sdf = g4sdf.join(pd.DataFrame(np.array(g4sntuple['y']['pages']),
                    columns=['y']), lsuffix = '_caller', rsuffix = '_other')
 g4sdf = g4sdf.join(pd.DataFrame(np.array(g4sntuple['z']['pages']), 
                    columns=['z']), lsuffix = '_caller', rsuffix = '_other')
-
-#Can vectorize by making NaN placeholders then simply filling if
-#not already filled using a basic loop
-#df = g4sdf[(g4sdf.x > -100) & (g4sdf.x < 100) & (g4sdf.z > -50) & (g4sdf.z < 30)]
-
+g4sdf = g4sdf.join(pd.DataFrame(np.array(g4sntuple['KE']['pages']), 
+                   columns=['KE']), lsuffix = '_caller', rsuffix = '_other')
 # apply E cut / detID cut and sum Edeps for each event using loc, groupby, and sum
 # write directly into output dataframe
-detector_hits = g4sdf.loc[(g4sdf.volID == 1) & (g4sdf.Edep > 0.0)]
 
+
+#df = g4sdf[g4sdf['event'] == 32779]
+#32779
+#exit()
+detector_hits = g4sdf.loc[(g4sdf.volID == 1) & (g4sdf.KE > 0) & (g4sdf.z < 1)]
 procdf = pd.DataFrame(detector_hits.groupby(['event','volID','iRep'], as_index=False)['Edep'].sum())
 procdf = procdf.rename(columns={'iRep':'detID', 'Edep':'energy'})
-x, y, z = [], [], []
+x, y, z, KE = [], [], [], []
+df = g4sdf[(g4sdf['volID'] == 1) & (g4sdf['z'] < 1)]
 for event in procdf['event']:
-  dfx = (g4sdf[(g4sdf['event'] == event) & (g4sdf['volID'] == 1)])
+  dfx = (df[(df['event'] == event)])
   try:
-    idx = np.argmax(list(dfx['Edep']))
+    idx = np.argmax(list(dfx['KE']))
     x.append(dfx['x'].iloc[idx])
     y.append(dfx['y'].iloc[idx])
     z.append(dfx['z'].iloc[idx])
+    KE.append(dfx['KE'].iloc[idx])
   except:
     print(dfx)
     x.append(1000)
@@ -55,15 +63,10 @@ for event in procdf['event']:
     z.append(-100)
     exit()
 
-#plt.figure(1)
-print(len(x))
-#plt.scatter(x, z)
-#plt.figure(2)
-#plt.hist(x)
-#plt.show()
 procdf['x'] = x
 procdf['y'] = y
 procdf['z'] = z
+procdf['KE'] =KE
 # apply energy resolution function
 #procdf['energy'] = procdf['energy'] + np.sqrt(procdf['energy'])*pctResAt1MeV/100.*np.random.randn(len(procdf['energy']))
 

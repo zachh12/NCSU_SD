@@ -1,0 +1,22 @@
+/run/verbose 1
+/g4simple/setRandomSeed true
+/g4simple/setReferencePhysList Shielding
+/g4simple/setDetectorGDML geom.gdml false
+/g4simple/setOutputFormat hdf5
+#/g4simple/setOutputOption stepwise
+/analysis/setFileName out31
+/g4simple/setVolID geDetector_PV 1
+/g4simple/recordAllSteps
+/run/initialize
+#/g4simple/listPhysVols
+/gps/particle ion
+/gps/ion 55 137 0 0
+#/gps/ion 19 40 0 0
+#/gps/ion 81 208 0 0
+/gps/energy 0.0 MeV
+/gps/pos/type Plane
+/gps/pos/shape Circle
+/gps/pos/radius 1.5 mm
+/gps/pos/centre 0 0 180 mm
+/gps/pos/confine source_PV
+/run/beamOn 250000

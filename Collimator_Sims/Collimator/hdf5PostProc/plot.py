@@ -4,23 +4,55 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-plt.style.use("mplstyle.txt")
+#plt.style.use("mplstyle.txt")
 
 
 df =  pd.read_hdf(sys.argv[1], key="procdf")
-#print(len(df))
-df = df[df['z'] > -1.5]
-df = df[df['energy'] > 1.3]
-df = df[(df['x'] < 100) & (df['x'] > -100) & (df['y'] < 100) & (df['y'] > -100)]
+#plt.hist(df['KE'])
+#plt.show()
+#exit()
+df = df[(df['KE'] > 2.614) & (df['KE'] < 2.616)]
+#df = df[(df['KE'] > 1.4) & (df['KE'] < 1.48)]
+#print(df)
+#exit()
+#df = df[(df['KE'] > 0.66165) & (df['KE'] < 0.66166)]
+#print(df)
+#exit()
 radius = np.sqrt(df['x']**2 + df['y']**2)
+plt.figure(0)
+plt.hist(radius, bins=250, histtype='step')
 df1 = df[radius < 2.5]
+print(len(df1))
 print(len(df1)/len(df))
-plt.hist(df['x'], bins=100)
+plt.xlabel("Radius (mm)")
+plt.ylabel("Counts")
+plt.axvline(x=220, color='r', linewidth=3)
+plt.figure(2)
+#print(df)
+plt.hist(df['KE'])
 plt.show()
 exit()
 
+plt.figure(0)
+plt.scatter(df['x'], df['z'])
+#exit()
+#df = df[df['z'] > -.3]
+#df = df[df['energy'] > .2]
+r = np.sqrt(df['x']**2 + df['y']**2)
+df1 = df[(df['x'] < 100) & (df['x'] > -100) & (df['y'] < 100) & (df['y'] > -100)]
+#df1 = df[r < 100]
+plt.figure(1)
+plt.hist(df['x'], bins=100)
+#plt.xlim(-100,100)
+plt.yscale('log')
+plt.figure(2)
+plt.hist(df1['x'], bins=100)
+plt.yscale('log')
+plt.show()
+#exit()
+
 dfE = df[(df['energy'] > 0.3)]
-x_hl = 15
+x_hl = 100
 y_hl = 100
 dfE = dfE[(dfE['x'] > -x_hl) & (dfE['x'] < x_hl)]
 dfE = dfE[(dfE['y'] > -y_hl) & (dfE['y'] < y_hl)]
