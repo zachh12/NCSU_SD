@@ -9,19 +9,20 @@ import sys
 
 df =  pd.read_hdf(sys.argv[1], key="procdf")
 
-df = df[(df['KE'] > 2.614) & (df['KE'] < 2.616)]
+#df = df[(df['KE'] > 2.614) & (df['KE'] < 2.616)]
 #df = df[(df['KE'] > 1.454) & (df['KE'] < 1.48)]
 #df = df[(df['KE'] > 0.66165) & (df['KE'] < 0.66166)]
 
 radius = np.sqrt(df['x']**2 + df['y']**2)
 plt.figure(0)
-plt.hist(radius, bins=88, histtype='step')
+plt.hist(radius, bins=110, histtype='step')
+#plt.yscale('log')
 df1 = df[radius < 2.5]
 df2 = df[radius < 220]
 df2 = df[(df['x'] < 200) & (df['x'] > -200) & (df['y'] > -100) & (df['y'] < 100)]
 print(len(df1))
 print(len(df1)/len(df2))
-plt.title("7.5cm Radius; 15cm Height Cyl")
+plt.title("Photopeak")
 plt.xlabel("Radius (mm)")
 plt.ylabel("Counts per 2.5 mm")
 plt.axvline(x=220, color='r', linewidth=3)
@@ -29,13 +30,16 @@ plt.xlim(0,220)
 plt.figure(2)
 #print(df)
 plt.hist(df2['x'], bins=100, histtype='step')
-plt.title("7.5cm Radius; 15cm Height Cyl")
+plt.title("Full Spectrum")
 plt.xlabel("X Location (mm)")
 plt.ylabel("Counts per 4 mm")
 plt.figure(3)
-plt.scatter(df2['x'], df2['y'])
+plt.scatter(df2['x'], df2['y'], alpha=0.2)
 plt.xlabel("X (mm)")
 plt.ylabel("Y (mm)")
+plt.figure(4)
+plt.hist(df['KE'], bins=100, histtype='step')
+plt.yscale('log')
 plt.show()
 exit()
 
