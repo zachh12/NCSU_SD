@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[28]:
 
 
 import numpy as np
@@ -9,9 +9,10 @@ import matplotlib.pyplot as plt
 import time
 import serial
 import datetime
+import sys
 
 
-# In[2]:
+# In[29]:
 
 
 # 1 rev = dist traveled is pitch of threaded rod
@@ -22,7 +23,7 @@ steps_per_rev_x = 400 # number of steps to travel the distance equivalent to pit
 steps_per_rev_y = 400 # number of steps to travel the distance equivalent to pitch
 
 
-# In[3]:
+# In[75]:
 
 
 # Establish a serial connection with Arduino
@@ -30,10 +31,14 @@ steps_per_rev_y = 400 # number of steps to travel the distance equivalent to pit
 ser = serial.Serial('/dev/cu.usbmodem14201', 9600)
 
 
-# In[4]:
+# In[76]:
 
 
 # Calibration: returns number of steps it takes to go from one side to the other in x and y
+
+cal = 'Calibration' 
+
+ser.write(str.encode(cal)) #send string to Arduino
 
 stepsx_tot = 0
 stepsy_tot = 0
@@ -45,18 +50,17 @@ while count < 1:
     count +=1
 
 
-# In[5]:
+# In[32]:
 
 
 # prints number of steps it takes to go from one side to the other in x and y
 
-'''
+
 print(stepsx_tot)
 print(stepsy_tot)
-'''
 
 
-# In[24]:
+# In[50]:
 
 
 # User decides where they want the defined zero position to be from the home position using keyboard inputs to \
@@ -104,49 +108,61 @@ print(ZeroY)
 # Determining region to scan from zero position
 
 
-# In[7]:
+# In[9]:
 
 
 Length_L = float(input("Input horizontal distance from center of detector to left end of region you want to scan (in cm) less than 20 cm"))
 
 
-# In[8]:
+# In[10]:
 
 
 Length_R = float(input("Input horizontal distance from center of detector to right end of region you want to scan (in cm) less than 20 cm"))
 
 
-# In[9]:
+# In[13]:
 
 
 # Checks to make sure inputs are valid
 
 if (Length_L + Length_R) > 20:
     sys.exit("ERROR: Horizontal distance cannot be greater than 20 cm")
+    
+if (ZeroX + Length_R) > 20:
+    sys.exit("ERROR: Selected scanning region is too big in the x direction. Readjust right scanning distance.")
+    
+if (ZeroX - Length_L) < 0:
+    sys.exit("ERROR: Selected scanning region is too big in the x direction. Readjust left scanning distance.")
 
 
-# In[10]:
+# In[14]:
 
 
 Height_B = float(input("Input vertical distance from center of detector to bottom end of region you want to scan (in cm) less than 40 cm"))
 
 
-# In[11]:
+# In[15]:
 
 
 Height_T = float(input("Input vertical distance from center of detector to top end of region you want to scan (in cm) less than 40 cm"))
 
 
-# In[12]:
+# In[16]:
 
 
 # Checks to make sure inputs are valid
 
 if (Height_B + Height_T) > 40:
     sys.exit("ERROR: Vertical distance cannot be greater than 40 cm")
+    
+if (ZeroY + Height_T) > 40:
+    sys.exit("ERROR: Selected scanning region is too big in the y direction. Readjust top scanning distance.")
+    
+if (ZeroY - Height_B) < 40:
+    sys.exit("ERROR: Selected scanning region is too big in the y direction. Readjust bottom scanning distance.")
 
 
-# In[13]:
+# In[17]:
 
 
 # position collimator to starting position in top left corner
@@ -155,7 +171,7 @@ start_x = Length_L
 start_y = Height_T
 
 
-# In[14]:
+# In[18]:
 
 
 # steps to take to travel dist to starting position
@@ -164,7 +180,7 @@ start_stepsx = (start_x/pitch) * steps_per_rev_x
 start_stepsy = (start_y/pitch) * steps_per_rev_y
 
 
-# In[15]:
+# In[19]:
 
 
 # Create a string to send to Arduino telling it which motor to move, how many steps, and in which direction
@@ -173,7 +189,7 @@ inputx=('x,' + str(start_stepsx) + ',1')
 inputy=('y,' + str(start_stepsy) + ',1')
 
 
-# In[16]:
+# In[20]:
 
 
 # Sends the string to the Arduino and motors move
@@ -183,7 +199,7 @@ time.sleep(2)
 ser.write(str.encode(inputy))
 
 
-# In[17]:
+# In[21]:
 
 
 # granularity - distance between center of scanned spots (in cm)
@@ -191,7 +207,7 @@ ser.write(str.encode(inputy))
 gran = float(input("Input the granularity (distance between the center of scanned spots in cm)"))
 
 
-# In[18]:
+# In[22]:
 
 
 # Check to make sure that input is valid
@@ -200,7 +216,7 @@ if gran > (Length_L + Length_R) or gran > (Height_B + Height_T):
     sys.exit("ERROR: Incompatible input. Granularity cannot be larger than scanning region")
 
 
-# In[19]:
+# In[23]:
 
 
 # time for source to be at each position over detector
@@ -208,7 +224,7 @@ if gran > (Length_L + Length_R) or gran > (Height_B + Height_T):
 wait = float(input("Input time for source to be at each collection spot (in seconds)"))
 
 
-# In[26]:
+# In[24]:
 
 
 # Open a text file to store positions and corresponding time during the scan
@@ -230,6 +246,9 @@ y_travel_dist = Height_B + Height_T
 x_dist = 0
 y_dist = y_travel_dist
 
+x_pos = x_dist + (ZeroX - Length_L)
+y_pos = y_dist + (ZeroY - Height_B)
+
 #Record initial starting place position and time and collect data
 t=0
 while t <= wait: #wait over area for specified amount of time so data can be collected
@@ -243,15 +262,16 @@ while y_dist >= 0:
     if x_dist <= (x_travel_dist + gran):
         #move over right to next region to be scanned
         move_x = (gran/pitch) * steps_per_rev_x #num of steps to take to move to next scanned region
-        x_dist += gran #determining x position 
+        x_dist += gran #determining x position
+        x_pos = x_dist + (ZeroX - Length_L)
         inputmovex = 'x,' + str(move_x) + ',0' #string formation to send to Arduino to move x motor right to next region
         print('x =', end =" ") #print progress update
-        print(x_dist)
+        print(x_pos)
         ser.write(str.encode(inputmovex)) #send string to Arduino to move x motor
         t=0
         while t <= wait: #wait over area for specified amount of time so data can be collected
             date = datetime.datetime.now().timestamp() #current unix timestamp
-            Time_and_Positions.write("%5.2f %5.2f %5.2f\n" % (date, x_dist , y_dist)) #write timestamp and x and y position to text file
+            Time_and_Positions.write("%5.2f %5.2f %5.2f\n" % (date, x_pos , y_pos)) #write timestamp and x and y position to text file
             time.sleep(1)
             t += 1
         
@@ -280,9 +300,11 @@ while y_dist >= 0:
             move_y = (gran/pitch) * steps_per_rev_y #num of steps to take to move down to next row of scanned region
             y_dist -= gran #determining y position
             x_dist = 0 #resetting x position back to 0
+            x_pos = x_dist + (ZeroX - Length_L)
+            y_pos = y_dist + (ZeroY - Height_B)
             inputmovey = 'y,' + str(move_y) + ',0' #string formation to send to Arduino to move y motor down
             print('y =', end =" ") #print progress update
-            print(y_dist)
+            print(y_pos)
             ser.write(str.encode(inputmovey)) #send string to Arduino
             time.sleep(3)
 
@@ -295,7 +317,7 @@ while y_dist >= 0:
             t=0
             while t <= wait: #wait over area for specified amount of time so data can be collected
                 date = datetime.datetime.now().timestamp()
-                Time_and_Positions.write("%5.2f %5.2f %5.2f\n" % (date, x_dist , y_dist))
+                Time_and_Positions.write("%5.2f %5.2f %5.2f\n" % (date, x_pos , y_pos))
                 time.sleep(1)
                 t += 1
         else:
@@ -328,7 +350,6 @@ print(stepsy_toend)
 # In[43]:
 
 
-'''
 # reset to specified zero position
 
 reset_x = Length_R
@@ -344,5 +365,4 @@ inputy=('y,' + str(reset_stepsy) + ',1')
 ser.write(str.encode(inputx))
 time.sleep(5)
 ser.write(str.encode(inputy))
-'''
 
